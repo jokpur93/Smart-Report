@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Sales Dashboard</title>
+
+<style>
+body{
+font-family:Arial,sans-serif;
+background:#eef2f7;
+margin:0;
+padding:12px;
+max-width:500px;
+margin:auto;
+}
+
+.header{
+background:linear-gradient(135deg,#2563eb,#1e40af);
+padding:20px;
+border-radius:18px;
+color:white;
+text-align:center;
+}
+
+.summary{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+margin-top:12px;
+}
+
+.summary-card{
+padding:16px;
+border-radius:16px;
+color:white;
+font-weight:bold;
+}
+
+.blue{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.green{background:linear-gradient(135deg,#22c55e,#15803d);}
+.orange{background:linear-gradient(135deg,#f59e0b,#d97706);}
+.red{background:linear-gradient(135deg,#ef4444,#b91c1c);}
+
+.card{
+background:white;
+padding:14px;
+border-radius:16px;
+margin-top:12px;
+}
+
+.table{
+width:100%;
+border-collapse:collapse;
+font-size:12px;
+margin-top:10px;
+}
+
+.table th{
+background:#2563eb;
+color:white;
+padding:8px;
+}
+
+.table td{
+padding:8px;
+background:white;
+border-bottom:1px solid #eee;
+text-align:center;
+}
+
+.filter{
+display:flex;
+gap:10px;
+margin-bottom:10px;
+}
+
+.filter input,
+.filter select{
+flex:1;
+padding:10px;
+border-radius:10px;
+border:1px solid #ddd;
+}
+
+.ach-good{color:green;font-weight:bold;}
+.ach-mid{color:orange;font-weight:bold;}
+.ach-low{color:red;font-weight:bold;}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h2>📊 Smart Sales Dashboard</h2>
+<p>Realtime Monitoring Sales Performance</p>
+</div>
+
+<div class="summary">
+<div class="summary-card blue">
+<div>Sales</div>
+<div id="totalSales">0</div>
+</div>
+
+<div class="summary-card green">
+<div>GS</div>
+<div><span id="totalGS">0</span> / <span id="avgGS">0%</span></div>
+</div>
+
+<div class="summary-card orange">
+<div>PC / AC / EC</div>
+<div><span id="totalPC">0</span> / <span id="totalAC">0</span> / <span id="totalEC">0</span></div>
+</div>
+
+<div class="summary-card red">
+<div>ACH</div>
+<div id="avgAch">0%</div>
+</div>
+
+
+
+<div class="summary-card green">
+<div>Total BE</div>
+<div id="totalBE">0</div>
+</div>
+
+<div class="summary-card orange">
+<div>Total Omset</div>
+<div id="totalACT">0</div>
+</div>
+
+<div class="summary-card blue">
+<div>BE Besok</div>
+<div id="totalBEBesok">0</div>
+</div>
+</div>
+
+<div class="card">
+<div class="filter">
+<input type="date" id="filterDate">
+<select id="filterType">
+<option value="">Semua Type</option>
+<option>WS ARJUNA</option>
+<option>WS BIMA</option>
+<option>RETAIL ARJUNA</option>
+<option>RETAIL BIMA</option>
+<option>MIX YUDISTIRA</option>
+<option>MTI</option>
+</select>
+</div>
+
+<table class="table">
+<thead>
+<tr>
+<th>Nama</th>
+<th>PC</th>
+<th>AC%</th>
+<th>EC%</th>
+<th>GS%</th>
+<th>BE</th>
+<th>Actual</th>
+<th>BE Besok</th>
+
+<th>ACH</th>
+<th>Jam</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+const app = initializeApp({
+apiKey:"AIzaSyDoJlfZlbfq46Mu1BWNSNIQRJ4dHnGM848",
+authDomain:"laporan-sales-92b74.firebaseapp.com",
+projectId:"laporan-sales-92b74"
+});
+
+const db=getFirestore(app);
+
+filterDate.valueAsDate=new Date();
+
+function achClass(v){
+if(v>=100) return 'ach-good';
+if(v>=80) return 'ach-mid';
+return 'ach-low';
+}
+
+async function loadData(){
+
+tbody.innerHTML="";
+
+let totalSales=0;
+let totalGS=0;
+let totalGSTarget=0;
+let totalPC=0;
+let totalAC=0;
+let totalEC=0;
+let totalAch=0;
+
+let totalBE=0;
+let totalACT=0;
+let totalBEBesok=0;
+let totalData=0;
+
+const snap=await getDocs(collection(db,"laporan"));
+
+snap.forEach(doc=>{
+
+const d=doc.data();
+
+if(filterDate.value && d.tanggal!==filterDate.value) return;
+if(filterType.value && d.type!==filterType.value) return;
+
+const ach=Math.round((d.act||0)/(d.be||1)*100);
+const acp=Math.round((d.ac||0)/(d.pc||1)*100);
+const ecp=Math.round((d.ec||0)/(d.ac||1)*100);
+
+
+tbody.innerHTML += `
+<tr>
+<td>${d.nama||'-'}</td>
+<td>${d.pc||0}</td>
+<td class="${achClass(acp)}">${acp}%</td>
+<td class="${achClass(ecp)}">${ecp}%</td>
+<td class="${achClass(Math.round((d.gs_actual||0)/(d.gs_target||1)*100))}">${Math.round((d.gs_actual||0)/(d.gs_target||1)*100)}%</td>
+<td>${Number(d.be||0).toLocaleString('id-ID')}</td>
+<td>${Number(d.act||0).toLocaleString('id-ID')}</td>
+<td>${Number(d.be_besok||0).toLocaleString('id-ID')}</td>
+
+<td class="${achClass(ach)}">${ach}%</td>
+<td>${d.jam||'-'}</td>
+</tr>
+`;
+
+totalSales++;
+totalGS += Number(d.gs_actual||0);
+totalGSTarget += Number(d.gs_target||0);
+totalPC += Number(d.pc||0);
+totalAC += Number(d.ac||0);
+totalEC += Number(d.ec||0);
+totalBE += Number(d.be||0);
+totalACT += Number(d.act||0);
+totalBEBesok += Number(d.be_besok||0);
+
+totalAch += ach;
+totalData++;
+
+});
+
+document.getElementById("totalSales").innerText=totalSales;
+document.getElementById("totalGS").innerText=totalGS;
+document.getElementById("avgGS").innerText=(totalGSTarget?Math.round((totalGS/totalGSTarget)*100):0)+"%";
+document.getElementById("totalPC").innerText=totalPC;
+document.getElementById("totalAC").innerText=totalAC;
+document.getElementById("totalEC").innerText=totalEC;
+document.getElementById("avgAch").innerText=(totalData?Math.round(totalAch/totalData):0)+"%";
+
+document.getElementById("totalBE").innerText=Number(totalBE).toLocaleString('id-ID');
+document.getElementById("totalACT").innerText=Number(totalACT).toLocaleString('id-ID');
+document.getElementById("totalBEBesok").innerText=Number(totalBEBesok).toLocaleString('id-ID');
+}
+
+filterDate.addEventListener("change",loadData);
+filterType.addEventListener("change",loadData);
+
+loadData();
+</script>
+
+</body>
+</html>

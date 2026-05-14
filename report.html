@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Report Sales</title>
+
+<style>
+body{
+font-family:Arial,sans-serif;
+background:#eef2f7;
+padding:12px;
+max-width:500px;
+margin:auto;
+}
+
+.header{
+background:linear-gradient(135deg,#2563eb,#1e40af);
+padding:18px;
+border-radius:18px;
+color:white;
+text-align:center;
+margin-bottom:12px;
+box-shadow:0 4px 12px rgba(0,0,0,0.15);
+}
+
+.card{
+background:white;
+padding:14px;
+border-radius:16px;
+margin-top:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.05);
+}
+
+.row{
+display:flex;
+align-items:center;
+gap:10px;
+margin-top:10px;
+}
+
+.row span:first-child{
+width:45px;
+min-width:45px;
+font-size:12px;
+font-weight:bold;
+}
+
+.row input,
+.row select{
+flex:1;
+padding:10px;
+border-radius:10px;
+border:1px solid #ddd;
+box-sizing:border-box;
+}
+
+.row span:last-child{
+width:50px;
+text-align:center;
+font-size:12px;
+font-weight:bold;
+}
+
+button{
+width:100%;
+padding:14px;
+border:none;
+border-radius:14px;
+background:linear-gradient(135deg,#2563eb,#1e40af);
+color:white;
+font-size:16px;
+font-weight:bold;
+margin-top:14px;
+cursor:pointer;
+}
+
+input,select{
+width:100%;
+padding:10px;
+border-radius:10px;
+border:1px solid #ddd;
+box-sizing:border-box;
+margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h2>📊 Smart Report Sales</h2>
+<p>Realtime Daily Sales Monitoring</p>
+</div>
+
+<div class="card">
+<input type="date" id="tanggal">
+
+<select id="nama">
+<option>Reinald Bayu Andika</option>
+<option>Rizky Aprianor</option>
+<option>Muhammad Roy Hanafi</option>
+</select>
+
+<select id="type">
+<option>WS ARJUNA</option>
+<option>WS BIMA</option>
+<option>RETAIL ARJUNA</option>
+<option>RETAIL BIMA</option>
+<option>MIX YUDISTIRA</option>
+<option>MTI</option>
+</select>
+</div>
+
+<div class="card">
+<b>📈 Proses</b>
+
+<div class="row">
+<span>PC</span>
+<input id="pc">
+<span>-</span>
+</div>
+
+<div class="row">
+<span>AC</span>
+<input id="ac">
+<span id="p_ac">-</span>
+</div>
+
+<div class="row">
+<span>EC</span>
+<input id="ec">
+<span id="p_ec">-</span>
+</div>
+</div>
+
+
+
+<div class="card">
+<b>🌿 Green Store</b>
+
+<div class="row">
+<span>TGT</span>
+<input id="gs_target" placeholder="Target GS">
+<span>-</span>
+</div>
+
+<div class="row">
+<span>ACT</span>
+<input id="gs_actual" placeholder="Actual GS">
+<span id="p_gs">-</span>
+</div>
+</div>
+
+<div class="card">
+<b>💰 Sales Omset</b>
+
+<input id="be" placeholder="BE Kemarin">
+<input id="act" placeholder="Actual Hari Ini">
+<input id="be_besok" placeholder="BE Besok">
+</div>
+
+<button onclick="save()">Submit Report</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+const app = initializeApp({
+apiKey:"AIzaSyDoJlfZlbfq46Mu1BWNSNIQRJ4dHnGM848",
+authDomain:"laporan-sales-92b74.firebaseapp.com",
+projectId:"laporan-sales-92b74"
+});
+
+const db=getFirestore(app);
+
+tanggal.valueAsDate = new Date();
+
+function persen(a,b){
+return Math.round((a||0)/(b||1)*100)+"%";
+}
+
+function hitung(){
+p_ac.innerHTML = persen(Number(ac.value),Number(pc.value));
+p_ec.innerHTML = persen(Number(ec.value),Number(ac.value));
+p_gs.innerHTML = persen(Number(gs_actual.value),Number(gs_target.value));
+}
+
+pc.oninput=hitung;
+ac.oninput=hitung;
+ec.oninput=hitung;
+gs_target.oninput=hitung;
+gs_actual.oninput=hitung;
+
+
+function formatAngka(input){
+let angka = input.value.replace(/\D/g,'');
+input.value = Number(angka).toLocaleString('id-ID');
+}
+
+be.addEventListener('input',()=>formatAngka(be));
+act.addEventListener('input',()=>formatAngka(act));
+be_besok.addEventListener('input',()=>formatAngka(be_besok));
+
+window.save=async function(){
+
+const docId = tanggal.value + '_' + nama.value;
+
+const now = new Date();
+const jamInput = now.toLocaleTimeString('id-ID',{
+hour:'2-digit',
+minute:'2-digit'
+});
+
+await setDoc(doc(db,"laporan",docId),{
+tanggal:tanggal.value,
+nama:nama.value,
+type:type.value,
+pc:Number(pc.value)||0,
+ac:Number(ac.value)||0,
+ec:Number(ec.value)||0,
+gs_target:Number(gs_target.value)||0,
+gs_actual:Number(gs_actual.value)||0,
+be:Number(be.value.replace(/\./g,''))||0,
+act:Number(act.value.replace(/\./g,''))||0,
+be_besok:Number(be_besok.value.replace(/\./g,''))||0,
+jam:jamInput
+});
+
+alert("Report berhasil disimpan");
+location.reload();
+}
+</script>
+
+</body>
+</html>
